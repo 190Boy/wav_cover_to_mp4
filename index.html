@@ -138,6 +138,46 @@
       border-color: #fed7aa;
       color: #9a3412;
     }
+
+    .download-card {
+      margin: 0 0 18px;
+      padding: 16px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+    .download-card strong {
+      display: block;
+      color: #1e3a8a;
+      margin-bottom: 4px;
+    }
+    .download-card p {
+      margin: 0;
+      color: #475569;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+    .download-card a {
+      flex: 0 0 auto;
+      display: inline-block;
+      padding: 11px 16px;
+      border-radius: 12px;
+      background: #2563eb;
+      color: #fff;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .download-card a:hover { background: #1d4ed8; }
+    @media (max-width: 760px) {
+      .download-card { align-items: stretch; flex-direction: column; }
+      .download-card a { text-align: center; }
+    }
+
     .option-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -157,6 +197,14 @@
 
     <div class="block warn">
       第一次使用會下載 FFmpeg WebAssembly 核心，請保持網路連線。轉換過程都在你的瀏覽器本機執行，不會上傳音檔。
+    </div>
+
+    <div class="download-card">
+      <div>
+        <strong>覺得網頁版轉換太慢？</strong>
+        <p>可以下載本機版工具，會使用電腦端 FFmpeg 執行轉檔，速度通常會比網頁版快很多。</p>
+      </div>
+      <a href="https://drive.google.com/file/d/1XJxser3GIBnIM-9MjErmAvWQxbZWdHlv/view?usp=sharing" target="_blank" rel="noopener noreferrer">下載本機版</a>
     </div>
 
     <div class="grid">

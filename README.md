@@ -51,3 +51,12 @@ ffmpeg/
 ```
 
 不要只上傳 `index.html`，否則會無法載入 FFmpeg Worker。
+
+## 本機版下載
+
+如果網頁版轉換速度太慢，可以使用本機版工具。
+
+下載連結：
+https://drive.google.com/file/d/1XJxser3GIBnIM-9MjErmAvWQxbZWdHlv/view?usp=sharing
+
+本機版會使用電腦端 FFmpeg 執行轉檔，速度通常會比網頁版快很多。
