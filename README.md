@@ -35,3 +35,19 @@
 - 不想安裝 FFmpeg 或額外軟體
 
 如果一次要轉大量音檔，或每首歌都很長，仍建議使用本機 `ffmpeg.exe` 批次檔版本。
+
+
+## GitHub Pages 注意事項
+
+這版已經把 `@ffmpeg/ffmpeg` 需要的外層 Worker 放在 `ffmpeg/` 資料夾內。上傳到 GitHub Pages 時，請務必保留以下結構：
+
+```
+index.html
+README.md
+ffmpeg/
+  worker.js
+  const.js
+  errors.js
+```
+
+不要只上傳 `index.html`，否則會無法載入 FFmpeg Worker。

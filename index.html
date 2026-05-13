@@ -81,6 +81,16 @@
       margin-top: 8px;
       word-break: break-all;
     }
+
+    .file-list {
+      margin: 8px 0 0 0;
+      padding-left: 20px;
+      line-height: 1.7;
+    }
+    .file-list li {
+      word-break: break-all;
+      margin-bottom: 2px;
+    }
     .preview {
       width: 100%;
       max-height: 260px;
@@ -212,7 +222,7 @@
   </div>
 
   <script type="module">
-    import { FFmpeg } from "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
+    import { FFmpeg } from "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.12/dist/esm/index.js";
     import { fetchFile, toBlobURL } from "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js";
 
     const coverInput = document.getElementById("coverInput");
@@ -274,6 +284,15 @@
       return "jpg";
     }
 
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     function formatSize(bytes) {
       if (bytes < 1024) return bytes + " B";
       if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
@@ -308,14 +327,29 @@
       if (ffmpegLoaded) return;
       log("正在載入 FFmpeg 核心，第一次會比較久，請稍候...");
       ffmpeg = new FFmpeg();
-      const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm";
+
+      // FFmpeg 核心檔可從 CDN 下載後轉成 blob，避免 core/wasm 的 CORS 問題。
+      // 但 @ffmpeg/ffmpeg 的外層 worker 需要與網頁同網域，所以這版把 worker.js / const.js / errors.js 放在本專案的 ffmpeg/ 資料夾。
+      const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
+      const classWorkerURL = new URL("./ffmpeg/worker.js", window.location.href).href;
+
       ffmpeg.on("progress", ({ progress }) => {
         fileProgress.value = Math.max(0, Math.min(100, progress * 100));
       });
+
+      const [coreURL, wasmURL, workerURL] = await Promise.all([
+        toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+        toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+        toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, "text/javascript"),
+      ]);
+
       await ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+        coreURL,
+        wasmURL,
+        workerURL,
+        classWorkerURL,
       });
+
       ffmpegLoaded = true;
       log("FFmpeg 載入完成！");
     }
@@ -345,7 +379,10 @@
         audioInfo.textContent = "尚未選擇音檔";
         return;
       }
-      audioInfo.textContent = `已選擇 ${files.length} 個音檔：` + files.map(f => f.name).join("、");
+      const listHtml = files
+        .map(file => `<li>${escapeHtml(file.name)}</li>`)
+        .join("");
+      audioInfo.innerHTML = `已選擇 ${files.length} 個音檔：<ul class="file-list">${listHtml}</ul>`;
     });
 
     startBtn.addEventListener("click", async () => {
