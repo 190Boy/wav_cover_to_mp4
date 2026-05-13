@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>封面圖 + WAV 批次轉 MP4</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Arial, "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+      background: #f3f4f6;
+      margin: 0;
+      padding: 24px;
+      color: #222;
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 28px;
+      border-radius: 18px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+    .lead {
+      margin-top: 0;
+      color: #555;
+      line-height: 1.6;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .grid { grid-template-columns: 1fr; }
+      body { padding: 12px; }
+      .wrap { padding: 18px; }
+    }
+    .block {
+      margin-bottom: 18px;
+      padding: 16px;
+      background: #fafafa;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+    }
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    input[type="file"], select {
+      width: 100%;
+      padding: 10px;
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+    }
+    button {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    button:hover:not(:disabled) { background: #1d4ed8; }
+    button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+    .small {
+      color: #666;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-top: 8px;
+      word-break: break-all;
+    }
+    .preview {
+      width: 100%;
+      max-height: 260px;
+      object-fit: contain;
+      background: #111;
+      border-radius: 12px;
+      margin-top: 12px;
+      display: none;
+    }
+    .progress-row { margin: 12px 0; }
+    progress {
+      width: 100%;
+      height: 20px;
+      accent-color: #2563eb;
+    }
+    #status {
+      white-space: pre-wrap;
+      background: #111827;
+      color: #86efac;
+      padding: 14px;
+      border-radius: 12px;
+      min-height: 180px;
+      max-height: 320px;
+      overflow-y: auto;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .result-item {
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .result-item a {
+      display: inline-block;
+      margin-top: 8px;
+      color: #2563eb;
+      font-weight: 700;
+    }
+    .ok { color: #16a34a; font-weight: 700; }
+    .err { color: #dc2626; font-weight: 700; }
+    .warn {
+      background: #fff7ed;
+      border-color: #fed7aa;
+      color: #9a3412;
+    }
+    .option-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 760px) {
+      .option-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>封面圖 + WAV 批次轉 MP4</h1>
+    <p class="lead">
+      選擇一張封面圖與多個 WAV 音檔，工具會逐一輸出 MP4。影片尺寸會依照封面圖原始尺寸產生，例如封面是 2560×1440，輸出的 MP4 也會是 2560×1440。
+    </p>
+
+    <div class="block warn">
+      第一次使用會下載 FFmpeg WebAssembly 核心，請保持網路連線。轉換過程都在你的瀏覽器本機執行，不會上傳音檔。
+    </div>
+
+    <div class="grid">
+      <div class="block">
+        <label for="coverInput">1. 選擇封面圖片（JPG / PNG / WEBP）</label>
+        <input type="file" id="coverInput" accept="image/*" />
+        <div id="coverInfo" class="small">尚未選擇圖片</div>
+        <img id="coverPreview" class="preview" alt="封面預覽" />
+      </div>
+
+      <div class="block">
+        <label for="audioInput">2. 選擇多個 WAV 音檔</label>
+        <input type="file" id="audioInput" accept=".wav,audio/wav,audio/x-wav" multiple />
+        <div id="audioInfo" class="small">尚未選擇音檔</div>
+      </div>
+    </div>
+
+    <div class="block">
+      <label>3. 輸出設定</label>
+      <div class="option-row">
+        <div>
+          <div class="small">音訊品質</div>
+          <select id="audioBitrate">
+            <option value="128k">128k</option>
+            <option value="192k" selected>192k</option>
+            <option value="256k">256k</option>
+            <option value="320k">320k</option>
+          </select>
+        </div>
+        <div>
+          <div class="small">影像品質 / 速度</div>
+          <select id="crfValue">
+            <option value="18">高品質，檔案較大</option>
+            <option value="23" selected>標準</option>
+            <option value="28">較快，檔案較小</option>
+          </select>
+        </div>
+      </div>
+      <div class="small">影片尺寸：自動使用封面圖原始尺寸。若封面寬高不是偶數，會自動修正為偶數，避免 MP4 編碼失敗。</div>
+    </div>
+
+    <div class="block">
+      <button id="startBtn">開始轉換</button>
+      <div class="progress-row">
+        <div class="small">整體進度</div>
+        <progress id="overallProgress" value="0" max="100"></progress>
+      </div>
+      <div class="progress-row">
+        <div class="small">當前檔案進度</div>
+        <progress id="fileProgress" value="0" max="100"></progress>
+      </div>
+    </div>
+
+    <div class="block">
+      <label>狀態訊息</label>
+      <div id="status"></div>
+    </div>
+
+    <div class="block">
+      <label>輸出結果</label>
+      <div id="results"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { FFmpeg } from "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
+    import { fetchFile, toBlobURL } from "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js";
+
+    const coverInput = document.getElementById("coverInput");
+    const audioInput = document.getElementById("audioInput");
+    const startBtn = document.getElementById("startBtn");
+    const coverInfo = document.getElementById("coverInfo");
+    const audioInfo = document.getElementById("audioInfo");
+    const statusBox = document.getElementById("status");
+    const resultsBox = document.getElementById("results");
+    const overallProgress = document.getElementById("overallProgress");
+    const fileProgress = document.getElementById("fileProgress");
+    const coverPreview = document.getElementById("coverPreview");
+    const audioBitrate = document.getElementById("audioBitrate");
+    const crfValue = document.getElementById("crfValue");
+
+    let ffmpeg;
+    let ffmpegLoaded = false;
+    let imageSize = null;
+
+    function log(msg) {
+      statusBox.textContent += msg + "\n";
+      statusBox.scrollTop = statusBox.scrollHeight;
+    }
+
+    function resetUI() {
+      statusBox.textContent = "";
+      resultsBox.innerHTML = "";
+      overallProgress.value = 0;
+      fileProgress.value = 0;
+    }
+
+    function getImageSize(file) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          const width = img.naturalWidth;
+          const height = img.naturalHeight;
+          URL.revokeObjectURL(url);
+          resolve({ width, height });
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error("無法讀取封面圖片尺寸"));
+        };
+        img.src = url;
+      });
+    }
+
+    function evenNumber(n) {
+      return n % 2 === 0 ? n : n - 1;
+    }
+
+    function getImageExt(fileName) {
+      const lower = fileName.toLowerCase();
+      if (lower.endsWith(".png")) return "png";
+      if (lower.endsWith(".webp")) return "webp";
+      if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "jpg";
+      return "jpg";
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+      return (bytes / (1024 * 1024 * 1024)).toFixed(2) + " GB";
+    }
+
+    function safeBaseName(fileName) {
+      return fileName.replace(/\.[^/.]+$/, "").replace(/[\\/:*?"<>|]/g, "_");
+    }
+
+    function createDownloadLink(blob, fileName, fileSizeText) {
+      const url = URL.createObjectURL(blob);
+      const wrap = document.createElement("div");
+      wrap.className = "result-item";
+      const title = document.createElement("div");
+      title.innerHTML = `<span class="ok">完成</span>：${fileName}`;
+      const info = document.createElement("div");
+      info.className = "small";
+      info.textContent = `檔案大小：約 ${fileSizeText}`;
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      link.textContent = `下載 ${fileName}`;
+      wrap.appendChild(title);
+      wrap.appendChild(info);
+      wrap.appendChild(link);
+      resultsBox.appendChild(wrap);
+    }
+
+    async function loadFFmpeg() {
+      if (ffmpegLoaded) return;
+      log("正在載入 FFmpeg 核心，第一次會比較久，請稍候...");
+      ffmpeg = new FFmpeg();
+      const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm";
+      ffmpeg.on("progress", ({ progress }) => {
+        fileProgress.value = Math.max(0, Math.min(100, progress * 100));
+      });
+      await ffmpeg.load({
+        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+      });
+      ffmpegLoaded = true;
+      log("FFmpeg 載入完成！");
+    }
+
+    coverInput.addEventListener("change", async () => {
+      const file = coverInput.files[0];
+      imageSize = null;
+      coverPreview.style.display = "none";
+      coverPreview.removeAttribute("src");
+      if (!file) {
+        coverInfo.textContent = "尚未選擇圖片";
+        return;
+      }
+      try {
+        imageSize = await getImageSize(file);
+        coverInfo.textContent = `已選擇：${file.name}｜原始尺寸：${imageSize.width} × ${imageSize.height}`;
+        coverPreview.src = URL.createObjectURL(file);
+        coverPreview.style.display = "block";
+      } catch (err) {
+        coverInfo.textContent = "讀取圖片失敗：" + err.message;
+      }
+    });
+
+    audioInput.addEventListener("change", () => {
+      const files = [...audioInput.files];
+      if (!files.length) {
+        audioInfo.textContent = "尚未選擇音檔";
+        return;
+      }
+      audioInfo.textContent = `已選擇 ${files.length} 個音檔：` + files.map(f => f.name).join("、");
+    });
+
+    startBtn.addEventListener("click", async () => {
+      const coverFile = coverInput.files[0];
+      const audioFiles = [...audioInput.files];
+      if (!coverFile) {
+        alert("請先選擇封面圖片");
+        return;
+      }
+      if (!audioFiles.length) {
+        alert("請先選擇至少一個 WAV 音檔");
+        return;
+      }
+      startBtn.disabled = true;
+      resetUI();
+      try {
+        if (!imageSize) imageSize = await getImageSize(coverFile);
+        const originalWidth = imageSize.width;
+        const originalHeight = imageSize.height;
+        const outputWidth = evenNumber(originalWidth);
+        const outputHeight = evenNumber(originalHeight);
+        const imageExt = getImageExt(coverFile.name);
+        const imageName = `cover.${imageExt}`;
+        const bitrate = audioBitrate.value;
+        const crf = crfValue.value;
+
+        await loadFFmpeg();
+        log(`封面圖：${coverFile.name}`);
+        log(`封面原始尺寸：${originalWidth} × ${originalHeight}`);
+        log(`輸出影片尺寸：${outputWidth} × ${outputHeight}`);
+        if (originalWidth !== outputWidth || originalHeight !== outputHeight) {
+          log("注意：封面尺寸有奇數寬高，已自動調整為偶數尺寸，避免 H.264 編碼失敗。");
+        }
+        log(`音檔數量：${audioFiles.length}`);
+        log(`音訊品質：${bitrate}`);
+        log("開始批次轉換...");
+
+        await ffmpeg.writeFile(imageName, await fetchFile(coverFile));
+
+        for (let i = 0; i < audioFiles.length; i++) {
+          const wavFile = audioFiles[i];
+          const safeAudioName = "input.wav";
+          const outputName = "output.mp4";
+          const downloadName = `${safeBaseName(wavFile.name)}.mp4`;
+          log("");
+          log(`======== [${i + 1}/${audioFiles.length}] 正在處理：${wavFile.name} ========`);
+          fileProgress.value = 0;
+          try {
+            await ffmpeg.writeFile(safeAudioName, await fetchFile(wavFile));
+            const vf = `scale=${outputWidth}:${outputHeight}:force_original_aspect_ratio=decrease,pad=${outputWidth}:${outputHeight}:(ow-iw)/2:(oh-ih)/2,setsar=1`;
+            await ffmpeg.exec([
+              "-y",
+              "-loop", "1",
+              "-i", imageName,
+              "-i", safeAudioName,
+              "-c:v", "libx264",
+              "-tune", "stillimage",
+              "-vf", vf,
+              "-r", "30",
+              "-crf", crf,
+              "-preset", "veryfast",
+              "-c:a", "aac",
+              "-ar", "44100",
+              "-ac", "2",
+              "-b:a", bitrate,
+              "-pix_fmt", "yuv420p",
+              "-shortest",
+              outputName
+            ]);
+            const data = await ffmpeg.readFile(outputName);
+            const blob = new Blob([data.buffer], { type: "video/mp4" });
+            createDownloadLink(blob, downloadName, formatSize(blob.size));
+            log(`完成：${downloadName}`);
+            await ffmpeg.deleteFile(safeAudioName).catch(() => {});
+            await ffmpeg.deleteFile(outputName).catch(() => {});
+          } catch (err) {
+            console.error(err);
+            log(`❌ 失敗：${wavFile.name}`);
+            const failItem = document.createElement("div");
+            failItem.className = "result-item";
+            failItem.innerHTML = `<span class="err">失敗</span>：${wavFile.name}<div class="small">${err.message || err}</div>`;
+            resultsBox.appendChild(failItem);
+          }
+          overallProgress.value = ((i + 1) / audioFiles.length) * 100;
+        }
+        log("");
+        log("全部轉換完成！");
+      } catch (err) {
+        console.error(err);
+        log("發生錯誤：" + (err.message || err));
+        alert("轉換過程發生錯誤，請看狀態訊息。");
+      } finally {
+        startBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
